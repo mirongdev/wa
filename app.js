@@ -45,13 +45,13 @@ app.listen(port, () => {
 
 
 
-const mongoose = require('mongoose');
-mongoose.connect('mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/wa-bot');
+// const mongoose = require('mongoose');
+// mongoose.connect('mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/wa-bot');
 
-const Cat = mongoose.model('CatVercel', { name: String });
+// const Cat = mongoose.model('CatVercel', { name: String });
 
-const kitty = new Cat({ name: 'Zildjian' });
-kitty.save().then(() => console.log('meow'));
+// const kitty = new Cat({ name: 'Zildjian' });
+// kitty.save().then(() => console.log('meow'));
 
 
 async function connectionLogic() {
