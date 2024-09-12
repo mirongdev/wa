@@ -1,70 +1,99 @@
-const express = require('express');
-const mongoose = require('mongoose');
+const {
+  DisconnectReason,
+  useMultiFileAuthState,
+} = require("@whiskeysockets/baileys");
+const useMongoDBAuthState = require("./mongoAuthState");
+const makeWASocket = require("@whiskeysockets/baileys").default;
+const { MongoClient, ServerApiVersion } = require("mongodb");
 
-// Inisialisasi Express
+const express = require("express");
 const app = express();
+const port = process.env.PORT || 3000;
 
-// Menghubungkan ke MongoDB
-mongoose.connect('mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/wa-bot', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => {
-    console.log('Connected to MongoDB');
-}).catch(err => {
-    console.log('Error connecting to MongoDB:', err.message);
+const mongoURL = "mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/";
+const waDBMongo = "wa-bot";
+const waCollectionMongo = "auth_info_baileys";
+
+const setting = require("./config/settings");
+const store = {}; // Tempat penyimpanan sementara data
+const welcome = {}; // Data atau konfigurasi terkait pesan selamat datang
+
+app.get("/", (req, res) => {
+  res.send("wa engine by mirongdev vercel");
 });
 
-// Definisikan Schema dan Model untuk koleksi 'cats'
-const catSchema = new mongoose.Schema({
-    name: String,
-    age: Number
-});
-const Cat = mongoose.model('Cat', catSchema);
-
-// Rute untuk Insert menggunakan GET
-app.get('/insert', async (req, res) => {
-    const { name, age } = req.query;
-
-    // Validasi data
-    if (!name || !age) {
-        return res.status(400).json({ success: false, message: 'Name and age are required.' });
-    }
-
-    try {
-        // Insert data ke MongoDB
-        const newCat = new Cat({ name, age });
-        await newCat.save();
-        res.status(201).json({ success: true, message: 'Data inserted successfully!', data: newCat });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to insert data.', error: error.message });
-    }
+app.get("/cek", (req, res) => {
+  res.send("perubahan menunggu proses build selesai yah");
 });
 
-// Rute untuk View (GET)
-app.get('/view', async (req, res) => {
-    const { name, age } = req.query;
+app.get("/run", (req, res) => {
+  res.send("menjalankan wa engine");
+  connectionLogic();
+});
 
-    try {
-        // Jika ada filter name dan age
-        let query = {};
-        if (name) query.name = name;
-        if (age) query.age = age;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
 
-        const cats = await Cat.find(query);
+async function connectionLogic() {
+  try {
+    const mongoClient = new MongoClient(mongoURL, {
+      serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+        ssl: true,
+        serverSelectionTimeoutMS: 50000, // Timeout yang cukup lama
+      },
+    });
+
+    await mongoClient.connect();
+    console.log("Connected to MongoDB");
+
+    const collection = mongoClient.db(waDBMongo).collection(waCollectionMongo);
+
+    // Mendapatkan state autentikasi dari MongoDB
+    const { state, saveCreds } = await useMongoDBAuthState(collection);
+    
+    // Membuat koneksi WA Socket
+    const sock = makeWASocket({
+      printQRInTerminal: true,
+      auth: state,
+    });
+
+    sock.ev.on("connection.update", async (update) => {
+      const { connection, lastDisconnect, qr } = update || {};
+
+      if (qr) {
+        console.log("QR code generated:", qr);
+      }
+
+      if (connection === "close") {
+        console.log("Connection closed. Reason:", lastDisconnect?.error?.output?.statusCode);
         
-        // Jika data ditemukan
-        if (cats.length > 0) {
-            res.status(200).json({ success: true, data: cats });
+        const shouldReconnect =
+          lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+        
+        if (shouldReconnect) {
+          console.log("Reconnecting...");
+          connectionLogic();
         } else {
-            res.status(404).json({ success: false, message: 'No data found.' });
+          console.log("Logged out, not reconnecting.");
         }
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to retrieve data.', error: error.message });
-    }
-});
+      } else if (connection === "open") {
+        console.log("Successfully connected to WhatsApp");
+      }
+    });
 
-// Jalankan server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+    // Menangani update pesan
+    sock.ev.on("messages.upsert", messageEvent(sock, setting, store, welcome));
+
+    // Menyimpan kredensial
+    sock.ev.on("creds.update", saveCreds);
+
+  } catch (error) {
+    console.error("Error connecting to MongoDB or WhatsApp:", error.message);
+  }
+}
+
+connectionLogic();
