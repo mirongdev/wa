@@ -36,9 +36,11 @@ app.use(fileUpload({
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-const server = require("http").createServer(app);
+// const server = require("http").createServer(app);
+const server = http.createServer(app);
 const io = require("socket.io")(server);
 const port = process.env.PORT || 3000;
+
 const qrcode = require("qrcode");
 
 app.use("/assets", express.static(__dirname + "/client/assets"));
@@ -50,6 +52,10 @@ app.get("/scan", (req, res) => {
 });
 
 app.get("/", (req, res) => {
+    res.send("wa engine by mirongdev vercel");
+  });
+
+app.get("/index", (req, res) => {
     res.sendFile("./client/index.html", {
         root: __dirname,
     });
