@@ -87,7 +87,7 @@ async function connectionLogic() {
               }
           } else if (connection === "open") {
               log('WhatsApp berhasil terhubung');
-              await sendMessage("6285710002811@s.whatsapp.net", "Koneksi WhatsApp berhasil!");
+              // await sendMessage("6285710002811@s.whatsapp.net", "Koneksi WhatsApp berhasil!");
           }
       });
 
