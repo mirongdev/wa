@@ -23,12 +23,69 @@ const io = socketIO(server);
 // Store real-time logs
 const logMessages = [];
 
+setInterval(() => {
+  // Kirimkan request ke server Anda sendiri setiap 5 menit
+  fetch('https://wa-azure.vercel.app/keep-alive').catch(err => console.log("Keep-alive failed", err));
+}, 5 * 60 * 1000);
+
+app.get('/keep-alive', (req, res) => {
+  res.status(200).send('Server is alive');
+});
+
+
 // Endpoint untuk melihat log secara real-time
 app.get('/log', (req, res) => {
   res.sendFile(__dirname + '/log.html'); // Serve log.html
 });
 
 // Endpoint untuk mengirim pesan
+// app.get('/send', async (req, res) => {
+//   const pesan = req.query.pesan;
+//   const tujuan = `${req.query.tujuan}@s.whatsapp.net`;
+
+//   if (!pesan || !tujuan) {
+//     res.status(400).send("Pesan atau tujuan tidak valid.");
+//     return;
+//   }
+
+//   try {
+//     await sendMessage(tujuan, pesan);
+//     res.send(`Pesan "${pesan}" berhasil dikirim ke ${req.query.tujuan}`);
+//   } catch (error) {
+//     res.status(500).send(`Gagal mengirim pesan: ${error.message}`);
+//   }
+// });
+
+// Cek apakah socket sudah siap
+async function sendMessage(to, message) {
+  if (!sock) {
+    throw new Error('WhatsApp socket belum siap');
+  }
+  try {
+    await sock.sendMessage(to, { text: message });
+  } catch (error) {
+    throw new Error('Gagal mengirim pesan: ' + error.message);
+  }
+}
+
+// Retry mekanisme
+async function retrySendMessage(to, message, retries = 3, delay = 5000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await sendMessage(to, message);
+      return;
+    } catch (error) {
+      if (i < retries - 1) {
+        console.log(`Retrying to send message... (${i + 1}/${retries})`);
+        await new Promise(res => setTimeout(res, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
+
 app.get('/send', async (req, res) => {
   const pesan = req.query.pesan;
   const tujuan = `${req.query.tujuan}@s.whatsapp.net`;
@@ -39,12 +96,14 @@ app.get('/send', async (req, res) => {
   }
 
   try {
-    await sendMessage(tujuan, pesan);
+    await retrySendMessage(tujuan, pesan);
     res.send(`Pesan "${pesan}" berhasil dikirim ke ${req.query.tujuan}`);
   } catch (error) {
     res.status(500).send(`Gagal mengirim pesan: ${error.message}`);
   }
 });
+
+
 
 // Mulai server
 const port = process.env.PORT || 3000;
