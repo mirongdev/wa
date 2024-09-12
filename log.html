@@ -1,57 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log WhatsApp Bot</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        h1 {
-            background-color: #333;
-            color: #fff;
-            padding: 10px;
-            margin: 0;
-            text-align: center;
-        }
-        #log {
-            flex: 1;
-            padding: 10px;
-            overflow-y: auto;
-            background-color: #f9f9f9;
-        }
-        .log-entry {
-            margin-bottom: 10px;
-            padding: 5px;
-            border-bottom: 1px solid #ddd;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Bot Log</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    h1 {
+      background-color: #333;
+      color: #fff;
+      padding: 10px;
+      margin: 0;
+      text-align: center;
+    }
+    #log {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+    }
+    .log-entry {
+      margin-bottom: 10px;
+      padding: 5px;
+      border-bottom: 1px solid #ddd;
+    }
+  </style>
 </head>
 <body>
-    <h1>WhatsApp Bot Log</h1>
-    <div id="log"></div>
+  <h1>WhatsApp Bot Log</h1>
+  <div id="log"></div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
 
-        // Menambahkan log ke halaman web
-        socket.on('log', function(message) {
-            const logDiv = document.getElementById('log');
-            const logEntry = document.createElement('div');
-            logEntry.classList.add('log-entry');
-            logEntry.textContent = message;
-            logDiv.appendChild(logEntry);
+    socket.on('log', function(message) {
+      const logDiv = document.getElementById('log');
+      const logEntry = document.createElement('div');
+      logEntry.classList.add('log-entry');
+      logEntry.textContent = message;
+      logDiv.appendChild(logEntry);
 
-            // Scroll otomatis ke bawah
-            logDiv.scrollTop = logDiv.scrollHeight;
-        });
-    </script>
+      logDiv.scrollTop = logDiv.scrollHeight; // Auto scroll ke bawah
+    });
+  </script>
 </body>
 </html>
