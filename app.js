@@ -4,8 +4,12 @@ const {
 } = require("@whiskeysockets/baileys");
 const useMongoDBAuthState = require("./mongoAuthState");
 const makeWASocket = require("@whiskeysockets/baileys").default;
-const mongoURL =
-  "mongodb+srv://mirongdev:mirongdevx@clustermirongdev.331e4.mongodb.net/";
+// const mongoURL =
+//   "mongodb+srv://mirongdev:mirongdevx@clustermirongdev.331e4.mongodb.net/";
+
+  const mongoURL =
+  "mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/";
+
 // const { MongoClient } = require("mongodb");
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
@@ -22,7 +26,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('wa engine by mirongdev vercel');
+  res.send('wa engine by mirongdev vercel bisa');
 });
 app.get('/cek', (req, res) => {
     res.send('perubahan menunggu proses build selesai yah');
