@@ -138,6 +138,11 @@ const connectToWhatsApp = async () => {
             if (incomingMessage?.toLowerCase() === "ping") {
                 await sock.sendMessage(senderId, { text: "Pong" }, { quoted: messages[0] });
             }
+
+            if (incomingMessage?.toLowerCase() === "fay") {
+                await sock.sendMessage(senderId, { text: "tau aja nama gw :)" }, { quoted: messages[0] });
+            }
+
         }
     });
 };
