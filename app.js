@@ -104,7 +104,7 @@ const useMongoDBAuthState = require("./mongoAuthState");
 const mongoURL = "mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/";
 const waDBMongo = "wa-bot";
 
-const debug = true;
+const debug = false;
 const waCollectionMongo = debug ? "auth_info_baileys_debugx" : "auth_info_baileysx";
 
 
