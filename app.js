@@ -267,6 +267,7 @@ const isConnected = () => {
 
 // const qrcode = require('qrcode');
 
+
 const updateQR = (data, qr = null) => {
     switch (data) {
         case "qr":
