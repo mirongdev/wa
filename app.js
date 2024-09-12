@@ -27,8 +27,8 @@ const server = http.createServer(app);
 const io = socketIO(server);
 const P = require('pino')
 
-const logger = P({ timestamp: () => `,"time":"${new Date().toJSON()}"` }, P.destination('./wa-logs.txt'));
-logger.level = 'debug'; // Set logging level to debug
+// const logger = P({ timestamp: () => `,"time":"${new Date().toJSON()}"` }, P.destination('./wa-logs.txt'));
+// logger.level = 'debug'; // Set logging level to debug
 
 
 app.get("/", (req, res) => {
