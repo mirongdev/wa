@@ -21,6 +21,7 @@ const waDBMongo = "wa-bot";
 const waCollectionMongo ="auth_info_baileys";
 
 
+
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -42,6 +43,15 @@ app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
+
+
+const mongoose = require('mongoose');
+mongoose.connect('mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/wa-bot');
+
+const Cat = mongoose.model('CatVercel', { name: String });
+
+const kitty = new Cat({ name: 'Zildjian' });
+kitty.save().then(() => console.log('meow'));
 
 
 async function connectionLogic() {
