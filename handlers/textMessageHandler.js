@@ -1,7 +1,7 @@
 const handleTextMessage = async (conn, msg, m, setting) => {
   const receivedMessage = msg.message.conversation;
   const sender = msg.key.remoteJid;
-  console.log(`balasan Pesan text dari ${sender}: ${receivedMessage}`);
+  console.log(`pesan dari ${sender}: ${receivedMessage}`);
 
 
 
@@ -30,7 +30,7 @@ const handleTextMessage = async (conn, msg, m, setting) => {
       // var teks = allmenu(sender, prefix, pushname, isOwner, isPremium, balance, limit, limitCount, glimit, gcount)
       // conn.sendMessage(from, { caption: teks, location: {}, templateButtons: buttonsDefault, mentions: [sender] })
       break;
-    case "adin":
+    case "fay":
       reply(
         `Hi 👋 apa kamu mengenalku?, jika belum, sangat senang sekali jika kamu mau perkenalkan diri dulu sebelum lanjut percakapan ini. :D 😬`
       );
