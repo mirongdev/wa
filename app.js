@@ -1,306 +1,184 @@
 const {
     default: makeWASocket,
-    MessageType,
-    MessageOptions,
-    Mimetype,
-    DisconnectReason,
-    BufferJSON,
-    AnyMessageContent,
-    delay,
     fetchLatestBaileysVersion,
     isJidBroadcast,
-    makeCacheableSignalKeyStore,
     makeInMemoryStore,
-    MessageRetryMap,
-    useMultiFileAuthState,
-    msgRetryCounterMap
+    DisconnectReason,
 } = require("@whiskeysockets/baileys");
 
-const log = (pino = require("pino"));
-const { session } = { "session": "baileys_auth_info" };
-const { Boom } = require("@hapi/boom");
-const path = require('path');
-const fs = require('fs');
-const http = require('http');
-const https = require('https');
+const { MongoClient, ServerApiVersion } = require("mongodb");
 const express = require("express");
+const http = require("http");
 const fileUpload = require('express-fileupload');
 const cors = require('cors');
 const bodyParser = require("body-parser");
-const app = require("express")()
-// enable files upload
-app.use(fileUpload({
-    createParentPath: true
-}));
+const qrcode = require("qrcode");
+const socketIO = require("socket.io");
+const { Boom } = require("@hapi/boom");
+const path = require('path');
+const pino = require("pino");
+const useMongoDBAuthState = require("./mongoAuthState");
 
+const app = express();
+const server = http.createServer(app);
+const io = socketIO(server);
+const port = process.env.PORT || 3000;
+
+const mongoURL = "mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/";
+const waDBMongo = "wa-bot";
+const waCollectionMongo = process.env.NODE_ENV === 'production' ? "auth_info_baileys" : "auth_info_baileys_debug";
+
+// MongoDB connection
+let mongoClient;
+const connectMongoDB = async () => {
+    mongoClient = new MongoClient(mongoURL, {
+        serverApi: {
+            version: ServerApiVersion.v1,
+            strict: true,
+            deprecationErrors: true,
+        },
+        serverSelectionTimeoutMS: 50000,
+    });
+    await mongoClient.connect();
+    console.log("Connected to MongoDB");
+};
+
+const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
+let sock;
+let qr; // To store QR code for Socket.io
+let soket; // To store current Socket.io connection
+
+// Middleware
+app.use(fileUpload({ createParentPath: true }));
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-// const server = require("http").createServer(app);
-const server = http.createServer(app);
-const io = require("socket.io")(server);
-const port = process.env.PORT || 3000;
-// const path = require("path");
-const qrcode = require("qrcode");
 
-// app.use("/assets", express.static(__dirname + "/client/assets"));
-
-// app.get("/scan", (req, res) => {
-//     res.sendFile("./client/server.html", {
-//         root: __dirname,
-//     });
-// });
-
-// app.get("/", (req, res) => {
-//     res.send("wa engine by mirongdev vercel");
-//   });
-
-// app.get("/index", (req, res) => {
-//     res.sendFile("./client/index.html", {
-//         root: __dirname,
-//     });
-// });
-
-
-
-// Serving static files from the 'client/assets' directory
+// Static file serving
 app.use("/assets", express.static(path.join(__dirname, "client", "assets")));
 
-// Serving 'server.html' for the '/scan' route
+// Routes
 app.get("/scan", (req, res) => {
     res.sendFile(path.join(__dirname, "client", "server.html"));
 });
 
-// Root route
 app.get("/", (req, res) => {
     res.send("wa engine by mirongdev vercel");
 });
 
-// Serving 'index.html' for the '/index' route
 app.get("/index", (req, res) => {
     res.sendFile(path.join(__dirname, "client", "index.html"));
 });
 
+// WhatsApp connection
+const connectToWhatsApp = async () => {
+    const { version } = await fetchLatestBaileysVersion();
+    const collection = mongoClient.db(waDBMongo).collection(waCollectionMongo);
+    const { state, saveCreds } = await useMongoDBAuthState(collection);
 
-//fungsi suara capital 
-function capital(textSound) {
-    const arr = textSound.split(" ");
-    for (var i = 0; i < arr.length; i++) {
-        arr[i] = arr[i].charAt(0).toUpperCase() + arr[i].slice(1);
-    }
-    const str = arr.join(" ");
-    return str;
-}
-const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
-
-let sock;
-let qr;
-let soket;
-
-const MongoClient = require("mongodb").MongoClient;
-const ServerApiVersion = require("mongodb").ServerApiVersion;
-const useMongoDBAuthState = require("./mongoAuthState");
-
-const mongoURL = "mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/";
-const waDBMongo = "wa-bot";
-
-const debug = true;
-const waCollectionMongo = debug ? "auth_info_baileys_debugx" : "auth_info_baileysx";
-
-
-
-async function connectToWhatsApp() {
-
-   
-    let { version, isLatest } = await fetchLatestBaileysVersion();
-
-
-
-
-    const mongoClient = new MongoClient(mongoURL, {
-        serverApi: {
-          version: ServerApiVersion.v1,
-          strict: true,
-          deprecationErrors: true,
-          ssl: true,
-          serverSelectionTimeoutMS: 50000,
-        },
-      });
-  
-      await mongoClient.connect();
-      const collection = mongoClient.db(waDBMongo).collection(waCollectionMongo);
-      const { state, saveCreds } = await useMongoDBAuthState(collection);
-       // const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')
-
-      sock = makeWASocket({
+    sock = makeWASocket({
         printQRInTerminal: true,
         auth: state,
-      });
-
-
-
-
-    //   sock = makeWASocket({
-    //     printQRInTerminal: true,
-    //     auth: state,
-    //     logger: log({ level: "silent" }),
-    //     version,
-    //     shouldIgnoreJid: jid => isJidBroadcast(jid),
-    // });
-
+        logger: pino({ level: "silent" }),
+        version,
+    });
 
     store.bind(sock.ev);
-    sock.multi = true
+
     sock.ev.on('connection.update', async (update) => {
-        try {
-            const { connection, lastDisconnect, qr } = update;
-    
-            if (connection === 'close') {
-                const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
-                
-                switch (reason) {
-                    case DisconnectReason.badSession:
-                        console.log(`Bad Session File, Please Delete ${session} and Scan Again.`);
-                        await sock.logout();
-                        break;
-    
-                    case DisconnectReason.connectionClosed:
-                        console.log("Connection closed, reconnecting...");
-                        connectToWhatsApp();
-                        break;
-    
-                    case DisconnectReason.connectionLost:
-                        console.log("Connection Lost from Server, reconnecting...");
-                        connectToWhatsApp();
-                        break;
-    
-                    case DisconnectReason.connectionReplaced:
-                        console.log("Connection Replaced, Another Session Opened. Logging out...");
-                        await sock.logout();
-                        break;
-    
-                    case DisconnectReason.loggedOut:
-                        console.log(`Device Logged Out, Please Delete ${session} and Scan Again.`);
-                        await sock.logout();
-                        break;
-    
-                    case DisconnectReason.restartRequired:
-                        console.log("Restart Required, Restarting...");
-                        connectToWhatsApp();
-                        break;
-    
-                    case DisconnectReason.timedOut:
-                        console.log("Connection Timed Out, Reconnecting...");
-                        connectToWhatsApp();
-                        break;
-    
-                    default:
-                        console.error(`Unknown Disconnect Reason: ${reason}`, lastDisconnect?.error);
-                        sock.end(`Unknown Disconnect Reason: ${reason}`);
-                        break;
-                }
+        const { connection, lastDisconnect, qr: qrCode } = update;
+        const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
+
+        if (connection === 'close') {
+            switch (reason) {
+                case DisconnectReason.badSession:
+                    console.log("Bad session file. Please delete and scan again.");
+                    await sock.logout();
+                    break;
+                case DisconnectReason.connectionClosed:
+                    console.log("Connection closed. Reconnecting...");
+                    connectToWhatsApp();
+                    break;
+                case DisconnectReason.loggedOut:
+                    console.log("Logged out. Please delete the session and scan again.");
+                    await sock.logout();
+                    break;
+                case DisconnectReason.restartRequired:
+                case 515: // Handle specific stream error (Restart required)
+                    console.log("Restart required due to stream error. Reconnecting...");
+                    connectToWhatsApp(); // Restart the connection
+                    break;
+                default:
+                    console.log(`Unknown Disconnect Reason: ${reason}`, lastDisconnect?.error);
+                    break;
             }
-    
-            if (connection === 'open') {
-                console.log('Opened connection');
-                // Fetch group information
-                const groups = Object.values(await sock.groupFetchAllParticipating());
-                for (const group of groups) {
-                    console.log(`Group ID: ${group.id}, Name: ${group.subject}`);
-                }
-            }
-    
-            // Handle QR code updates
-            if (qr) {
-                console.log("QR code received", qr);
-                updateQR(qr);  // Only pass the actual QR code string to the updateQR function
-            } else {
-                updateQR(null);  // Handle the case where the QR code is not available
-            }
-    
-        } catch (error) {
-            console.error("Error in connection update:", error);
+        } else if (connection === 'open') {
+            console.log('Connected to WhatsApp');
+            const groups = Object.values(await sock.groupFetchAllParticipating());
+            groups.forEach(group => {
+                console.log(`Group: ${group.subject}, ID: ${group.id}`);
+            });
+        }
+
+        if (qrCode) {
+            qr = qrCode;
+            updateQR("qr", qrCode);
+        } else {
+            updateQR("loading");
         }
     });
-    
-    
+
     sock.ev.on("creds.update", saveCreds);
+
     sock.ev.on("messages.upsert", async ({ messages, type }) => {
-        //console.log(messages);
-        if (type === "notify") {
-            if (!messages[0].key.fromMe) {
-                //tentukan jenis pesan berbentuk text                
-                const pesan = messages[0].message.conversation;
+        if (type === "notify" && !messages[0].key.fromMe) {
+            const incomingMessage = messages[0].message?.conversation;
+            const senderId = messages[0].key.remoteJid;
 
-                //nowa dari pengirim pesan sebagai id
-                const noWa = messages[0].key.remoteJid;
-
-                await sock.readMessages([messages[0].key]);
-
-                //kecilkan semua pesan yang masuk lowercase 
-                const pesanMasuk = pesan.toLowerCase();
-
-                if (!messages[0].key.fromMe && pesanMasuk === "ping") {
-                    await sock.sendMessage(noWa, { text: "Pong" }, { quoted: messages[0] });
-                } else {
-                    // await sock.sendMessage(noWa, { text: "Saya adalah Bot!" }, { quoted: messages[0] });
-                }
+            if (incomingMessage?.toLowerCase() === "ping") {
+                await sock.sendMessage(senderId, { text: "Pong" }, { quoted: messages[0] });
             }
         }
     });
-}
-
-io.on("connection", async (socket) => {
-    soket = socket;
-    // console.log(sock)
-    if (isConnected) {
-        updateQR("connected");
-    } else if (qr) {
-        updateQR("qr");
-    }
-});
-
-// functions
-const isConnected = () => {
-    return (sock.user);
 };
 
-// const qrcode = require('qrcode');
 
-
-const updateQR = (data, qr = null) => {
-    switch (data) {
+const updateQR = (status, qrCode = null) => {
+    switch (status) {
         case "qr":
-            if (qr) {  // Ensure qr is not null or undefined
-                qrcode.toDataURL(qr, (err, url) => {
+            if (qrCode) {
+                qrcode.toDataURL(qrCode, (err, url) => {
                     if (err) {
                         console.error("Error generating QR code:", err);
                         return;
                     }
                     soket?.emit("qr", url);
-                    soket?.emit("log", "QR Code received, please scan!");
+                    soket?.emit("log", "QR Code received. Please scan.");
                 });
-            } else {
-                console.error("No QR data provided for QR generation.");
             }
             break;
         case "connected":
             soket?.emit("qrstatus", "./assets/check.svg");
-            soket?.emit("log", "WhatsApp terhubung!");
-            break;
-        case "qrscanned":
-            soket?.emit("qrstatus", "./assets/check.svg");
-            soket?.emit("log", "QR Code telah discan!");
+            soket?.emit("log", "Connected to WhatsApp.");
             break;
         case "loading":
             soket?.emit("qrstatus", "./assets/loader.gif");
-            soket?.emit("log", "Registering QR Code, please wait!");
+            soket?.emit("log", "Waiting for QR code...");
             break;
         default:
-            console.error("Unknown QR status:", data);
+            console.error("Unknown QR status:", status);
             break;
     }
 };
+
+// Socket.io connection
+io.on("connection", (socket) => {
+    soket = socket;
+    if (qr) {
+        updateQR("qr", qr);
+    }
+});
+
 
 
 // send text message to wa user
@@ -723,8 +601,17 @@ app.post("/send-group-message", async (req, res) => {
 
 });
 
-connectToWhatsApp()
-    .catch(err => console.log("unexpected error: " + err)) // catch any errors
-server.listen(port, () => {
-    console.log("Server Berjalan pada Port : " + port);
+// connectToWhatsApp()
+//     .catch(err => console.log("unexpected error: " + err)) // catch any errors
+// server.listen(port, () => {
+//     console.log("Server Berjalan pada Port : " + port);
+// });
+
+
+// Start server
+server.listen(port, async () => {
+    await connectMongoDB();
+    await connectToWhatsApp();
+    console.log(`Server is running on port ${port}`);
 });
+
