@@ -24,7 +24,7 @@
     "jimp": "^0.16.1",
     "mongodb": "^6.8.1",
     "path": "^0.12.7",
-    "qrcode": "^1.5.1",
+    "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "request": "^2.88.2",
     "sharp": "^0.32.6",

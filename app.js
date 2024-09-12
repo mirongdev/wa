@@ -104,7 +104,7 @@ const useMongoDBAuthState = require("./mongoAuthState");
 const mongoURL = "mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/";
 const waDBMongo = "wa-bot";
 
-const debug = false;
+const debug = true;
 const waCollectionMongo = debug ? "auth_info_baileys_debugx" : "auth_info_baileysx";
 
 
@@ -132,78 +132,98 @@ async function connectToWhatsApp() {
       const { state, saveCreds } = await useMongoDBAuthState(collection);
        // const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info')
 
-    //   sock = makeWASocket({
-    //     printQRInTerminal: true,
-    //     auth: state,
-    //   });
-
-
-
-
       sock = makeWASocket({
         printQRInTerminal: true,
         auth: state,
-        logger: log({ level: "silent" }),
-        version,
-        shouldIgnoreJid: jid => isJidBroadcast(jid),
-    });
+      });
+
+
+
+
+    //   sock = makeWASocket({
+    //     printQRInTerminal: true,
+    //     auth: state,
+    //     logger: log({ level: "silent" }),
+    //     version,
+    //     shouldIgnoreJid: jid => isJidBroadcast(jid),
+    // });
 
 
     store.bind(sock.ev);
     sock.multi = true
     sock.ev.on('connection.update', async (update) => {
-        //console.log(update);
-        const { connection, lastDisconnect } = update;
-        if (connection === 'close') {
-            let reason = new Boom(lastDisconnect.error).output.statusCode;
-            if (reason === DisconnectReason.badSession) {
-                console.log(`Bad Session File, Please Delete ${session} and Scan Again`);
-                sock.logout();
-            } else if (reason === DisconnectReason.connectionClosed) {
-                console.log("Connection closed, reconnecting....");
-                connectToWhatsApp();
-            } else if (reason === DisconnectReason.connectionLost) {
-                console.log("Connection Lost from Server, reconnecting...");
-                connectToWhatsApp();
-            } else if (reason === DisconnectReason.connectionReplaced) {
-                console.log("Connection Replaced, Another New Session Opened, Please Close Current Session First");
-                sock.logout();
-            } else if (reason === DisconnectReason.loggedOut) {
-                console.log(`Device Logged Out, Please Delete ${session} and Scan Again.`);
-                sock.logout();
-            } else if (reason === DisconnectReason.restartRequired) {
-                console.log("Restart Required, Restarting...");
-                connectToWhatsApp();
-            } else if (reason === DisconnectReason.timedOut) {
-                console.log("Connection TimedOut, Reconnecting...");
-                connectToWhatsApp();
+        try {
+            const { connection, lastDisconnect, qr } = update;
+    
+            if (connection === 'close') {
+                const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
+                
+                switch (reason) {
+                    case DisconnectReason.badSession:
+                        console.log(`Bad Session File, Please Delete ${session} and Scan Again.`);
+                        await sock.logout();
+                        break;
+    
+                    case DisconnectReason.connectionClosed:
+                        console.log("Connection closed, reconnecting...");
+                        connectToWhatsApp();
+                        break;
+    
+                    case DisconnectReason.connectionLost:
+                        console.log("Connection Lost from Server, reconnecting...");
+                        connectToWhatsApp();
+                        break;
+    
+                    case DisconnectReason.connectionReplaced:
+                        console.log("Connection Replaced, Another Session Opened. Logging out...");
+                        await sock.logout();
+                        break;
+    
+                    case DisconnectReason.loggedOut:
+                        console.log(`Device Logged Out, Please Delete ${session} and Scan Again.`);
+                        await sock.logout();
+                        break;
+    
+                    case DisconnectReason.restartRequired:
+                        console.log("Restart Required, Restarting...");
+                        connectToWhatsApp();
+                        break;
+    
+                    case DisconnectReason.timedOut:
+                        console.log("Connection Timed Out, Reconnecting...");
+                        connectToWhatsApp();
+                        break;
+    
+                    default:
+                        console.error(`Unknown Disconnect Reason: ${reason}`, lastDisconnect?.error);
+                        sock.end(`Unknown Disconnect Reason: ${reason}`);
+                        break;
+                }
+            }
+    
+            if (connection === 'open') {
+                console.log('Opened connection');
+                // Fetch group information
+                const groups = Object.values(await sock.groupFetchAllParticipating());
+                for (const group of groups) {
+                    console.log(`Group ID: ${group.id}, Name: ${group.subject}`);
+                }
+            }
+    
+            // Handle QR code updates
+            if (qr) {
+                console.log("QR code received", qr);
+                updateQR(qr);  // Only pass the actual QR code string to the updateQR function
             } else {
-                sock.end(`Unknown DisconnectReason: ${reason}|${lastDisconnect.error}`);
+                updateQR(null);  // Handle the case where the QR code is not available
             }
-        } else if (connection === 'open') {
-            console.log('opened connection');
-            let getGroups = await sock.groupFetchAllParticipating();
-            let groups = Object.values(await sock.groupFetchAllParticipating())
-            //console.log(groups);
-            for (let group of groups) {
-                console.log("id_group: " + group.id + " || Nama Group: " + group.subject);
-            }
-            return;
-        }
-        if (update.qr) {
-            qr = update.qr;
-            updateQR("qr");
-        }
-        else if (qr = undefined) {
-            updateQR("loading");
-        }
-        else {
-            if (update.connection === "open") {
-                updateQR("qrscanned");
-                return;
-            }
+    
+        } catch (error) {
+            console.error("Error in connection update:", error);
         }
     });
+    
+    
     sock.ev.on("creds.update", saveCreds);
     sock.ev.on("messages.upsert", async ({ messages, type }) => {
         //console.log(messages);
@@ -245,13 +265,23 @@ const isConnected = () => {
     return (sock.user);
 };
 
-const updateQR = (data) => {
+// const qrcode = require('qrcode');
+
+const updateQR = (data, qr = null) => {
     switch (data) {
         case "qr":
-            qrcode.toDataURL(qr, (err, url) => {
-                soket?.emit("qr", url);
-                soket?.emit("log", "QR Code received, please scan!");
-            });
+            if (qr) {  // Ensure qr is not null or undefined
+                qrcode.toDataURL(qr, (err, url) => {
+                    if (err) {
+                        console.error("Error generating QR code:", err);
+                        return;
+                    }
+                    soket?.emit("qr", url);
+                    soket?.emit("log", "QR Code received, please scan!");
+                });
+            } else {
+                console.error("No QR data provided for QR generation.");
+            }
             break;
         case "connected":
             soket?.emit("qrstatus", "./assets/check.svg");
@@ -259,16 +289,18 @@ const updateQR = (data) => {
             break;
         case "qrscanned":
             soket?.emit("qrstatus", "./assets/check.svg");
-            soket?.emit("log", "QR Code Telah discan!");
+            soket?.emit("log", "QR Code telah discan!");
             break;
         case "loading":
             soket?.emit("qrstatus", "./assets/loader.gif");
-            soket?.emit("log", "Registering QR Code , please wait!");
+            soket?.emit("log", "Registering QR Code, please wait!");
             break;
         default:
+            console.error("Unknown QR status:", data);
             break;
     }
 };
+
 
 // send text message to wa user
 app.post("/send-message", async (req, res) => {
