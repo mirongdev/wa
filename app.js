@@ -72,10 +72,11 @@ async function connectionLogic() {
     const collection = mongoClient.db(waDBMongo).collection(waCollectionMongo);
     const { state, saveCreds } = await useMongoDBAuthState(collection);
 
+    // Membuat koneksi WhatsApp
     sock = makeWASocket({
       printQRInTerminal: true,
       auth: state,
-      logger: { level: 'silent' }, // Matikan log internal baileys
+      // Hapus logger untuk menghindari masalah
     });
 
     sock.ev.on("connection.update", async (update) => {
