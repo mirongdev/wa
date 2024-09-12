@@ -109,3 +109,4 @@ async function connectionLogic() {
 }
 
 
+connectionLogic();
