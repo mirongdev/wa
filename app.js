@@ -17,18 +17,29 @@ const waCollectionMongo = "auth_info_baileys";
 const setting = require("./config/settings");
 const store = {}; // Tempat penyimpanan sementara data
 const welcome = {}; // Data atau konfigurasi terkait pesan selamat datang
+const { messageEvent } = require("./events/messageEvent");
 
 app.get("/", (req, res) => {
-  res.send("wa engine by mirongdev vercel");
+  res.send("WA Engine by Mirongdev Vercel");
 });
 
 app.get("/cek", (req, res) => {
-  res.send("perubahan menunggu proses build selesai yah");
+  res.send("Perubahan menunggu proses build selesai yah");
 });
 
-app.get("/run", (req, res) => {
-  res.send("menjalankan wa engine");
-  connectionLogic();
+app.get("/run", async (req, res) => {
+  try {
+    const result = await connectionLogic();
+    res.json({
+      status: "success",
+      message: result,
+    });
+  } catch (error) {
+    res.json({
+      status: "error",
+      message: error.message,
+    });
+  }
 });
 
 app.listen(port, () => {
@@ -91,9 +102,12 @@ async function connectionLogic() {
     // Menyimpan kredensial
     sock.ev.on("creds.update", saveCreds);
 
+    // Mengirimkan pesan sukses jika berhasil terhubung
+    return "WhatsApp connection established successfully";
+    
   } catch (error) {
     console.error("Error connecting to MongoDB or WhatsApp:", error.message);
+    throw new Error("Connection failed: " + error.message);
   }
 }
 
-connectionLogic();
