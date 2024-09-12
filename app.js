@@ -20,7 +20,7 @@ const welcome = {}; // Data atau konfigurasi terkait pesan selamat datang
 const { messageEvent } = require("./events/messageEvent");
 
 app.get("/", (req, res) => {
-  res.send("WA Engine by Mirongdev Vercel");
+  res.send("WA Engine by Mirongdev Vercel bro");
 });
 
 app.get("/cek", (req, res) => {
