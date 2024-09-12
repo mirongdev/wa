@@ -40,26 +40,48 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const server = http.createServer(app);
 const io = require("socket.io")(server);
 const port = process.env.PORT || 3000;
-
+// const path = require("path");
 const qrcode = require("qrcode");
 
-app.use("/assets", express.static(__dirname + "/client/assets"));
+// app.use("/assets", express.static(__dirname + "/client/assets"));
 
+// app.get("/scan", (req, res) => {
+//     res.sendFile("./client/server.html", {
+//         root: __dirname,
+//     });
+// });
+
+// app.get("/", (req, res) => {
+//     res.send("wa engine by mirongdev vercel");
+//   });
+
+// app.get("/index", (req, res) => {
+//     res.sendFile("./client/index.html", {
+//         root: __dirname,
+//     });
+// });
+
+
+
+// Serving static files from the 'client/assets' directory
+app.use("/assets", express.static(path.join(__dirname, "client", "assets")));
+
+// Serving 'server.html' for the '/scan' route
 app.get("/scan", (req, res) => {
-    res.sendFile("./client/server.html", {
-        root: __dirname,
-    });
+    res.sendFile(path.join(__dirname, "client", "server.html"));
 });
 
+// Root route
 app.get("/", (req, res) => {
     res.send("wa engine by mirongdev vercel");
-  });
-
-app.get("/index", (req, res) => {
-    res.sendFile("./client/index.html", {
-        root: __dirname,
-    });
 });
+
+// Serving 'index.html' for the '/index' route
+app.get("/index", (req, res) => {
+    res.sendFile(path.join(__dirname, "client", "index.html"));
+});
+
+
 //fungsi suara capital 
 function capital(textSound) {
     const arr = textSound.split(" ");
