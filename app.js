@@ -94,21 +94,36 @@ async function connectionLogic() {
       sock.ev.on("creds.update", saveCreds);
 
       // Menghandle pesan masuk
-      sock.ev.on("messages.upsert", async (messageInfo) => {
-          const message = messageInfo.messages[0];
+  // Menghandle pesan masuk
+sock.ev.on("messages.upsert", async (messageInfo) => {
+  const message = messageInfo.messages[0];
+  
+  if (message.key.remoteJid === 'status@broadcast') return; // Abaikan pesan status
 
-          if (message.key.remoteJid === 'status@broadcast') return; // Abaikan pesan status
+  let pesanMasuk = "";
 
-          const pesanMasuk = message.message.conversation || message.message.extendedTextMessage.text;
+  // Mengecek tipe pesan yang masuk
+  if (message.message?.conversation) {
+      pesanMasuk = message.message.conversation;
+  } else if (message.message?.extendedTextMessage?.text) {
+      pesanMasuk = message.message.extendedTextMessage.text;
+  } else if (message.message?.imageMessage?.caption) {
+      pesanMasuk = message.message.imageMessage.caption;  // Jika pesan berupa gambar dengan keterangan
+  } else {
+      // Jika pesan bukan teks atau tidak dapat dikenali, kita abaikan untuk sementara
+      console.log('Pesan tidak dikenali atau bukan pesan teks');
+      return;
+  }
 
-          // Respon otomatis
-          if (pesanMasuk === '/hallo') {
-              await sendMessage(message.key.remoteJid, 'Hallo apa kabar?');
-          }
+  // Respon otomatis
+  if (pesanMasuk === '/hallo') {
+      await sendMessage(message.key.remoteJid, 'Hallo apa kabar?');
+  }
 
-          // Log pesan masuk
-          log(`Pesan masuk dari ${message.key.remoteJid}: ${pesanMasuk}`);
-      });
+  // Log pesan masuk
+  log(`Pesan masuk dari ${message.key.remoteJid}: ${pesanMasuk}`);
+});
+
 
   } catch (error) {
       log(`Error connecting to MongoDB or WhatsApp: ${error.message}`);
