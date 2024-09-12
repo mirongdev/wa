@@ -8,7 +8,7 @@ const makeWASocket = require("@whiskeysockets/baileys").default;
 //   "mongodb+srv://mirongdev:mirongdevx@clustermirongdev.331e4.mongodb.net/";
 
   const mongoURL =
-  "mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/";
+  "mongodb+srv://ClusterMirongdev-Vercel-Integration-66e26556c9c91a8860b989e6:vercel@clustermirongdev.331e4.mongodb.net/";
 
 // const { MongoClient } = require("mongodb");
 const { MongoClient, ServerApiVersion } = require('mongodb');
