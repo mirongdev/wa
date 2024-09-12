@@ -9,8 +9,8 @@ const collectionName = "authState";
 
 
 // const { default: makeWAconnet } = require('@adiwajshing/baileys-md');
-const { messageEvent } = require('./events/messageEvent');
-const setting = require('./config/settings');
+const { messageEvent } = require('../events/messageEvent');
+const setting = require('../config/settings');
 const store = {}; // Tempat penyimpanan sementara data
 const welcome = {}; // Data atau konfigurasi terkait pesan selamat datang
 
