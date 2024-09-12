@@ -53,6 +53,8 @@ async function connectionLogic() {
       version: ServerApiVersion.v1,
       strict: true,
       deprecationErrors: true,
+      ssl: true,
+      serverSelectionTimeoutMS: 50000
     }
   });
 
