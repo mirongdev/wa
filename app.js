@@ -27,7 +27,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('wa engine by mirongdev vercel bisa mongose');
+  res.send('wa engine by mirongdev vercel');
 });
 app.get('/cek', (req, res) => {
     res.send('perubahan menunggu proses build selesai yah');
