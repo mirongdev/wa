@@ -115,8 +115,8 @@ async function connectionLogic() {
            // Fungsi untuk mengirim pesan
            await sock.sendMessage(recipientNumber, { text: message });
            console.log("Pesan berhasil dikirim ke 085710002811!");
-           
-        console.log("Successfully connected to WhatsApp");
+
+     
       }
     });
 
