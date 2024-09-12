@@ -48,15 +48,29 @@ app.listen(port, () => {
 
 async function connectionLogic() {
   try {
+    // const mongoClient = new MongoClient(mongoURL, {
+    //   serverApi: {
+    //     version: ServerApiVersion.v1,
+    //     strict: true,
+    //     deprecationErrors: true,
+    //     ssl: true,
+    //     serverSelectionTimeoutMS: 50000, // Timeout yang cukup lama
+    //   },
+    // });
+
+
+
     const mongoClient = new MongoClient(mongoURL, {
       serverApi: {
         version: ServerApiVersion.v1,
         strict: true,
         deprecationErrors: true,
         ssl: true,
-        serverSelectionTimeoutMS: 50000, // Timeout yang cukup lama
+        serverSelectionTimeoutMS: 100000, // Tambahkan timeout lebih panjang
       },
     });
+
+    
 
     await mongoClient.connect();
     console.log("Connected to MongoDB");
@@ -87,11 +101,21 @@ async function connectionLogic() {
         
         if (shouldReconnect) {
           console.log("Reconnecting...");
-          connectionLogic();
+          // connectionLogic();
+          setTimeout(() => connectionLogic(), 5000); // Tunggu 5 detik sebelum mencoba lagi
+   
         } else {
           console.log("Logged out, not reconnecting.");
         }
       } else if (connection === "open") {
+           // Kirim pesan ke nomor 085710002811
+           const recipientNumber = "6285710002811@s.whatsapp.net"; // nomor WhatsApp dengan format internasional
+           const message = "Halo, ini adalah pesan otomatis yang dikirim oleh bot WhatsApp!";
+
+           // Fungsi untuk mengirim pesan
+           await sock.sendMessage(recipientNumber, { text: message });
+           console.log("Pesan berhasil dikirim ke 085710002811!");
+           
         console.log("Successfully connected to WhatsApp");
       }
     });
