@@ -1,128 +1,70 @@
-const {
-  DisconnectReason,
-  useMultiFileAuthState,
-} = require("@whiskeysockets/baileys");
-const useMongoDBAuthState = require("./mongoAuthState");
-const makeWASocket = require("@whiskeysockets/baileys").default;
-// const mongoURL =
-//   "mongodb+srv://mirongdev:mirongdevx@clustermirongdev.331e4.mongodb.net/";
-
-  const mongoURL =
-  "mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/";
-
-// const { MongoClient } = require("mongodb");
-const { MongoClient, ServerApiVersion } = require('mongodb');
-
-const { messageEvent } = require("./events/messageEvent");
-const setting = require("./config/settings");
-const store = {}; // Tempat penyimpanan sementara data
-const welcome = {}; // Data atau konfigurasi terkait pesan selamat datang
-const waDBMongo = "wa-bot";
-const waCollectionMongo ="auth_info_baileys";
-
-
-
 const express = require('express');
+const mongoose = require('mongoose');
+
+// Inisialisasi Express
 const app = express();
-const port = process.env.PORT || 3000;
 
-app.get('/', (req, res) => {
-  res.send('wa engine by mirongdev vercel');
-});
-app.get('/cek', (req, res) => {
-    res.send('perubahan menunggu proses build selesai yah');
-  });
-
-
-  app.get('/run', (req, res) => {
-    res.send('menjalankan wa engine');
-    connectionLogic();
-  });
- 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+// Menghubungkan ke MongoDB
+mongoose.connect('mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/wa-bot', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log('Connected to MongoDB');
+}).catch(err => {
+    console.log('Error connecting to MongoDB:', err.message);
 });
 
+// Definisikan Schema dan Model untuk koleksi 'cats'
+const catSchema = new mongoose.Schema({
+    name: String,
+    age: Number
+});
+const Cat = mongoose.model('Cat', catSchema);
 
+// Rute untuk Insert menggunakan GET
+app.get('/insert', async (req, res) => {
+    const { name, age } = req.query;
 
-// const mongoose = require('mongoose');
-// mongoose.connect('mongodb+srv://vercel-admin-user:vercel@clustermirongdev.331e4.mongodb.net/wa-bot');
-
-// const Cat = mongoose.model('CatVercel', { name: String });
-
-// const kitty = new Cat({ name: 'Zildjian' });
-// kitty.save().then(() => console.log('meow'));
-
-
-async function connectionLogic() {
-
-//   const mongoClientx = new MongoClient(mongoURL, {
-//     useNewUrlParser: true,
-//     useUnifiedTopology: true,
-//   });
-
-
-  const mongoClient = new MongoClient(mongoURL, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
-      ssl: true,
-      serverSelectionTimeoutMS: 50000
-    }
-  });
-
-
-  await mongoClient.connect();
-  // const { state, saveCreds } = await useMultiFileAuthState("auth_info_baileys");
-  const collection = mongoClient.db(waDBMongo).collection(waCollectionMongo);
-  const { state, saveCreds } = await useMongoDBAuthState(collection);
-  const sock = makeWASocket({
-    // can provide additional config here
-    printQRInTerminal: true,
-    auth: state,
-  });
-
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect, qr } = update || {};
-
-    if (qr) {
-      console.log(qr);
-      // write custom logic over here
+    // Validasi data
+    if (!name || !age) {
+        return res.status(400).json({ success: false, message: 'Name and age are required.' });
     }
 
-    if (connection === "close") {
-        console.log('koneksi terpputus');
-      const shouldReconnect =
-        lastDisconnect?.error?.output?.statusCode !==
-        DisconnectReason.loggedOut;
-
-      if (shouldReconnect) {
-        connectionLogic();
-      }
+    try {
+        // Insert data ke MongoDB
+        const newCat = new Cat({ name, age });
+        await newCat.save();
+        res.status(201).json({ success: true, message: 'Data inserted successfully!', data: newCat });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to insert data.', error: error.message });
     }
+});
 
-    else if (connection === 'open') {
-        console.log('Berhasil terhubung');
+// Rute untuk View (GET)
+app.get('/view', async (req, res) => {
+    const { name, age } = req.query;
+
+    try {
+        // Jika ada filter name dan age
+        let query = {};
+        if (name) query.name = name;
+        if (age) query.age = age;
+
+        const cats = await Cat.find(query);
+        
+        // Jika data ditemukan
+        if (cats.length > 0) {
+            res.status(200).json({ success: true, data: cats });
+        } else {
+            res.status(404).json({ success: false, message: 'No data found.' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to retrieve data.', error: error.message });
     }
+});
 
-
-  });
-
-  sock.ev.on("messages.update", (messageInfo) => {
-    // console.log(messageInfo);
-  });
-
-  // sock.ev.on("messages.upsert", (messageInfoUpsert) => {
-  //   console.log(messageInfoUpsert);
-  // });
-
-  // Memuat event messages.upsert
-  sock.ev.on("messages.upsert", messageEvent(sock, setting, store, welcome));
-
-  sock.ev.on("creds.update", saveCreds);// pastikan kredensial terus diperbarui dan disimpan
-  
-}
-
-
-connectionLogic();
+// Jalankan server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
