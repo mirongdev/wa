@@ -17,7 +17,7 @@ const io = socketIo(server, {
 });
 
 // Middleware CORS
-app.use(cors()); // Mengizinkan semua origin
+// app.use(cors()); // Mengizinkan semua origin
 
 // Atau setup CORS lebih spesifik seperti ini
 /*
@@ -28,6 +28,13 @@ app.use(cors({
 }));
 */
 
+
+app.use(cors({
+  origin: 'https://wa-xi-two.vercel.app', // Pastikan untuk mengizinkan domain yang tepat
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['X-CSRF-Token', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Content-Type', 'Date', 'X-Api-Version']
+}));
 
 
 const dirPublic=path.join(__dirname, 'public');
