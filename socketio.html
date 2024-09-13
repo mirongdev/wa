@@ -45,7 +45,11 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
     // Connect to the server
-    const socket = io();
+    // const socket = io();
+    const socket = io('https://wa-xi-two.vercel.app', {
+    transports: ['websocket', 'polling'] // Mengizinkan fallback ke polling jika websocket gagal
+});
+
 
     // Listen for 'message' event from the server
     socket.on('message', (msg) => {

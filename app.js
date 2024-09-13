@@ -13,8 +13,11 @@ const io = socketIo(server, {
     cors: {
         origin: "*", // Mengizinkan semua origin (atur untuk keamanan di produksi)
         methods: ["GET", "POST"]
-    }
+    },
+    transports: ['websocket', 'polling'] // Mengizinkan polling dan websocket
 });
+
+
 
 // Middleware CORS
 // app.use(cors()); // Mengizinkan semua origin
@@ -36,6 +39,7 @@ app.use(cors({
   allowedHeaders: ['X-CSRF-Token', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Content-Type', 'Date', 'X-Api-Version']
 }));
 
+app.options('*', cors()); // Mengaktifkan preflight requests
 
 const dirPublic=path.join(__dirname, 'public');
 
