@@ -19,6 +19,7 @@ const io = socketIo(server, {
 
 
 
+
 // Middleware CORS
 // app.use(cors()); // Mengizinkan semua origin
 
@@ -30,6 +31,45 @@ app.use(cors({
     credentials: true // Untuk mengizinkan cookies cross-origin
 }));
 */
+
+
+// Middleware CORS Vercel-style
+const allowCors = (fn) => async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Ganti dengan domain Anda
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  return await fn(req, res);
+};
+
+// Example GET route
+const handler = (req, res) => {
+  res.json({ message: 'Hello, world!' });
+};
+
+// Apply middleware to the handler
+app.get('/api', allowCors(handler));
+
+
+
+// Example GET route
+const handler2 = (req, res) => {
+  
+  res.sendFile(dirRoot+'/socketio.html');
+};
+
+// Apply middleware to the handler
+app.get('/socket', allowCors(handler2));
+
 
 
 app.use(cors({
