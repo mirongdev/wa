@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Chat Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #messages {
+            list-style-type: none;
+            padding: 0;
+        }
+        #messages li {
+            padding: 8px;
+            margin-bottom: 5px;
+            background-color: #f1f1f1;
+        }
+        #form {
+            display: flex;
+        }
+        #input {
+            flex-grow: 1;
+            padding: 10px;
+        }
+        #send {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Socket.IO Chat</h1>
+<ul id="messages"></ul>
+
+<form id="form" action="">
+    <input id="input" autocomplete="off" /><button id="send">Send</button>
+</form>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    // Connect to the server
+    const socket = io();
+
+    // Listen for 'message' event from the server
+    socket.on('message', (msg) => {
+        const item = document.createElement('li');
+        item.textContent = msg;
+        document.getElementById('messages').appendChild(item);
+    });
+
+    // Handle form submission to send a new message
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (input.value) {
+            // Emit 'chat message' event to the server
+            socket.emit('chat message', input.value);
+            input.value = '';
+        }
+    });
+
+    // Listen for 'chat message' events and add to the message list
+    socket.on('chat message', (msg) => {
+        const item = document.createElement('li');
+        item.textContent = msg;
+        document.getElementById('messages').appendChild(item);
+    });
+</script>
+
+</body>
+</html>
