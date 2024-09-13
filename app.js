@@ -3,12 +3,15 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path'); // To work with file paths
+const cors = require('cors');
 
 // Setup Express and HTTP server
 const app = express();
 const server = http.createServer(app);
 const dirPublic=path.join(__dirname, 'public');
 const dirRoot=path.join(__dirname, '');
+
+app.use(cors());
 // Setup Socket.IO
 const io = socketIo(server, {
  
