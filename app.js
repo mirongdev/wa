@@ -11,11 +11,18 @@ const dirPublic=path.join(__dirname, 'public');
 const dirRoot=path.join(__dirname, '');
 // Setup Socket.IO
 const io = socketIo(server, {
+  transports: ['websocket'], // Memaksa penggunaan WebSocket
     cors: {
         origin: "*", // Allow all origins (adjust for security in production)
         methods: ["GET", "POST"]
+        
     }
 });
+
+
+
+
+
 
 // Serve the HTML file on the "/view" route
 app.get('/view', (req, res) => {
